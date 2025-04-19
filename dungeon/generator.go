@@ -114,3 +114,10 @@ func max(a, b int) int {
 	}
 	return b
 }
+
+func IsWalkable(x, y int) bool {
+	if y < 0 || y >= len(GameMap) || x < 0 || x >= len(GameMap[y]) {
+		return false
+	}
+	return GameMap[y][x] != '#'
+}
