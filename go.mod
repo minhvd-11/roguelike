@@ -1,4 +1,4 @@
-module rougelike
+module roguelike
 
 go 1.24.2
 

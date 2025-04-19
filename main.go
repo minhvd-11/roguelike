@@ -3,27 +3,20 @@ package main
 import (
 	"log"
 
+	"roguelike/dungeon"
+
 	"github.com/gdamore/tcell/v2"
 )
 
-var gameMap = [][]rune{
-	[]rune("####################"),
-	[]rune("#..................#"),
-	[]rune("#..................#"),
-	[]rune("#.........######...#"),
-	[]rune("#..................#"),
-	[]rune("####################"),
-}
-
 func isWalkable(x, y int) bool {
-	if y < 0 || y >= len(gameMap) || x < 0 || x >= len(gameMap[y]) {
+	if y < 0 || y >= len(dungeon.GameMap) || x < 0 || x >= len(dungeon.GameMap[y]) {
 		return false
 	}
-	return gameMap[y][x] != '#'
+	return dungeon.GameMap[y][x] != '#'
 }
 
 func drawMap(screen tcell.Screen, style tcell.Style) {
-	for y, row := range gameMap {
+	for y, row := range dungeon.GameMap {
 		for x, ch := range row {
 			screen.SetContent(x, y, ch, nil, style)
 		}
@@ -42,8 +35,8 @@ func main() {
 
 	style := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
 
-	// Start player in an open spot
-	x, y := 1, 1
+	playerX, playerY := dungeon.GenerateDungeon()
+	x, y := playerX, playerY
 
 	for {
 		screen.Clear()
