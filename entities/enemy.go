@@ -1,7 +1,6 @@
 package entities
 
 import (
-	"math/rand"
 	"roguelike/dungeon"
 )
 
@@ -20,16 +19,36 @@ func (e *Enemy) IsAlive() bool {
 	return e.HP > 0
 }
 
-// Move enemy in a random direction (no pathfinding... yet)
-func (e *Enemy) MoveRandom() {
-	dx := []int{-1, 1, 0, 0}
-	dy := []int{0, 0, -1, 1}
-	i := rand.Intn(4)
-	newX := e.X + dx[i]
-	newY := e.Y + dy[i]
+// Move enemy toward player
+func (e *Enemy) MoveToward(targetX, targetY int, occupiedFn func(x, y int) bool) {
+	dx, dy := 0, 0
 
-	if dungeon.IsWalkable(newX, newY) {
+	if targetX < e.X {
+		dx = -1
+	} else if targetX > e.X {
+		dx = 1
+	}
+
+	if targetY < e.Y {
+		dy = -1
+	} else if targetY > e.Y {
+		dy = 1
+	}
+
+	// Try horizontal move first
+	newX := e.X + dx
+	newY := e.Y
+
+	if dungeon.IsWalkable(newX, newY) && !occupiedFn(newX, newY) {
 		e.X = newX
+		return
+	}
+
+	// Then try vertical move
+	newX = e.X
+	newY = e.Y + dy
+
+	if dungeon.IsWalkable(newX, newY) && !occupiedFn(newX, newY) {
 		e.Y = newY
 	}
 }

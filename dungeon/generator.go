@@ -2,6 +2,7 @@ package dungeon
 
 import (
 	"math/rand"
+	"slices"
 	"time"
 )
 
@@ -41,20 +42,14 @@ func GenerateDungeon() (int, int) {
 		}
 	}
 
-	for i := 0; i < MaxRooms; i++ {
+	for range MaxRooms {
 		w := RoomMinSize + rand.Intn(RoomMaxSize-RoomMinSize+1)
 		h := RoomMinSize + rand.Intn(RoomMaxSize-RoomMinSize+1)
 		x := rand.Intn(MapWidth - w - 1)
 		y := rand.Intn(MapHeight - h - 1)
 
 		newRoom := Room{x, y, x + w, y + h}
-		intersects := false
-		for _, other := range rooms {
-			if newRoom.Intersects(other) {
-				intersects = true
-				break
-			}
-		}
+		intersects := slices.ContainsFunc(rooms, newRoom.Intersects)
 
 		if !intersects {
 			createRoom(newRoom)

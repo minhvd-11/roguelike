@@ -113,10 +113,13 @@ func main() {
 		// Enemy movement and attack
 		for _, e := range enemies {
 			if e.IsAlive() {
-				e.MoveRandom()
-				if e.X == player.X && e.Y == player.Y {
+				e.MoveToward(player.X, player.Y, func(x, y int) bool {
+					return isOccupied(x, y, player, enemies, potions)
+				})
+				if abs(e.X-player.X)+abs(e.Y-player.Y) == 1 {
 					player.HP -= 1
 				}
+
 			}
 		}
 	}
@@ -135,6 +138,13 @@ func main() {
 			return
 		}
 	}
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
 }
 
 func tryMovePlayer(player *entities.Player, dx, dy int) {
@@ -175,4 +185,21 @@ func drawMap(screen tcell.Screen, style tcell.Style) {
 			screen.SetContent(x, y, ch, nil, style)
 		}
 	}
+}
+
+func isOccupied(x, y int, player *entities.Player, enemies []*entities.Enemy, potions []*entities.Potion) bool {
+	if x == player.X && y == player.Y {
+		return true
+	}
+	for _, e := range enemies {
+		if e.IsAlive() && e.X == x && e.Y == y {
+			return true
+		}
+	}
+	for _, p := range potions {
+		if p.X == x && p.Y == y {
+			return true
+		}
+	}
+	return false
 }
