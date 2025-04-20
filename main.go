@@ -14,6 +14,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+var logMessages []string
+
 var enemies []*entities.Enemy
 
 var potions []*entities.Potion
@@ -75,6 +77,7 @@ func main() {
 			}
 		}
 
+		//draw potions
 		for _, p := range potions {
 			screen.SetContent(p.X, p.Y, '!', nil, style)
 		}
@@ -83,6 +86,13 @@ func main() {
 		hpStr := "HP: " + strconv.Itoa(player.HP)
 		for i, r := range hpStr {
 			screen.SetContent(i, dungeon.MapHeight, r, nil, style)
+		}
+
+		logY := dungeon.MapHeight + 1
+		for i, msg := range logMessages {
+			for j, ch := range msg {
+				screen.SetContent(j, logY+i, ch, nil, style)
+			}
 		}
 
 		screen.Show()
@@ -118,8 +128,8 @@ func main() {
 				})
 				if abs(e.X-player.X)+abs(e.Y-player.Y) == 1 {
 					player.HP -= 1
+					addLog("-1 HP from enemy attack!")
 				}
-
 			}
 		}
 	}
@@ -155,6 +165,10 @@ func tryMovePlayer(player *entities.Player, dx, dy int) {
 	for _, e := range enemies {
 		if e.X == newX && e.Y == newY && e.IsAlive() {
 			e.HP -= 1
+			addLog("Enemy -1 HP!")
+			if e.HP == 0 {
+				addLog("You killed an enemy!")
+			}
 			return // attack instead of moving
 		}
 	}
@@ -168,6 +182,7 @@ func tryMovePlayer(player *entities.Player, dx, dy int) {
 				}
 			}
 
+			addLog("You picked up and drank a health potion.")
 			potions = slices.Delete(potions, i, i+1)
 			break
 		}
@@ -202,4 +217,11 @@ func isOccupied(x, y int, player *entities.Player, enemies []*entities.Enemy, po
 		}
 	}
 	return false
+}
+
+func addLog(msg string) {
+	logMessages = append(logMessages, msg)
+	if len(logMessages) > 3 {
+		logMessages = logMessages[1:] // keep last 3 messages
+	}
 }
