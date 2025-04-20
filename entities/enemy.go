@@ -6,13 +6,18 @@ import (
 )
 
 type Enemy struct {
-	X      int
-	Y      int
+	X, Y   int
 	Symbol rune
+	HP     int
 }
 
 func NewEnemy(x, y int) *Enemy {
-	return &Enemy{X: x, Y: y, Symbol: 'E'}
+	return &Enemy{X: x, Y: y, Symbol: 'E', HP: 3}
+}
+
+// Check if enemy is alive
+func (e *Enemy) IsAlive() bool {
+	return e.HP > 0
 }
 
 // Move enemy in a random direction (no pathfinding... yet)

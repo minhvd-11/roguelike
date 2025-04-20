@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"roguelike/dungeon"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 )
+
+var enemies []*entities.Enemy
 
 func main() {
 	screen, err := tcell.NewScreen()
@@ -26,15 +29,14 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 	playerX, playerY := dungeon.GenerateDungeon()
-	x, y := playerX, playerY
+	player := entities.NewPlayer(playerX, playerY)
 
 	// Spawn enemies
-	var enemies []*entities.Enemy
 	for i := 0; i < 5; i++ {
 		for {
 			ex := rand.Intn(dungeon.MapWidth)
 			ey := rand.Intn(dungeon.MapHeight)
-			if dungeon.IsWalkable(ex, ey) && (ex != x || ey != y) {
+			if dungeon.IsWalkable(ex, ey) && (ex != player.X || ey != player.Y) {
 				enemies = append(enemies, entities.NewEnemy(ex, ey))
 				break
 			}
@@ -44,18 +46,31 @@ func main() {
 	for {
 		screen.Clear()
 
-		// Draw dungeon
+		// Draw map
 		drawMap(screen, style)
 
 		// Draw player
-		screen.SetContent(x, y, '@', nil, style)
+		screen.SetContent(player.X, player.Y, '@', nil, style)
 
 		// Draw enemies
 		for _, e := range enemies {
-			screen.SetContent(e.X, e.Y, e.Symbol, nil, style)
+			if e.IsAlive() {
+				screen.SetContent(e.X, e.Y, e.Symbol, nil, style)
+			}
+		}
+
+		// Draw player HP
+		hpStr := "HP: " + strconv.Itoa(player.HP)
+		for i, r := range hpStr {
+			screen.SetContent(i, dungeon.MapHeight, r, nil, style)
 		}
 
 		screen.Show()
+
+		// Exit if player is dead
+		if player.HP <= 0 {
+			break
+		}
 
 		// Handle input
 		ev := screen.PollEvent()
@@ -65,28 +80,58 @@ func main() {
 			case tcell.KeyEscape:
 				return
 			case tcell.KeyUp:
-				if dungeon.IsWalkable(x, y-1) {
-					y--
-				}
+				tryMovePlayer(player, 0, -1)
 			case tcell.KeyDown:
-				if dungeon.IsWalkable(x, y+1) {
-					y++
-				}
+				tryMovePlayer(player, 0, 1)
 			case tcell.KeyLeft:
-				if dungeon.IsWalkable(x-1, y) {
-					x--
-				}
+				tryMovePlayer(player, -1, 0)
 			case tcell.KeyRight:
-				if dungeon.IsWalkable(x+1, y) {
-					x++
-				}
+				tryMovePlayer(player, 1, 0)
 			}
 		}
 
-		// Move enemies
+		// Enemy movement and attack
 		for _, e := range enemies {
-			e.MoveRandom()
+			if e.IsAlive() {
+				e.MoveRandom()
+				if e.X == player.X && e.Y == player.Y {
+					player.HP -= 1
+				}
+			}
 		}
+	}
+
+	// Show death message
+	screen.Clear()
+	msg := "You Died! Press ESC to exit..."
+	for i, r := range msg {
+		screen.SetContent(i+10, dungeon.MapHeight/2, r, nil, style)
+	}
+	screen.Show()
+
+	for {
+		ev := screen.PollEvent()
+		if key, ok := ev.(*tcell.EventKey); ok && key.Key() == tcell.KeyEscape {
+			return
+		}
+	}
+}
+
+func tryMovePlayer(player *entities.Player, dx, dy int) {
+	newX := player.X + dx
+	newY := player.Y + dy
+
+	// Check for enemy at target location
+	for _, e := range enemies {
+		if e.X == newX && e.Y == newY && e.IsAlive() {
+			e.HP -= 1
+			return // attack instead of moving
+		}
+	}
+
+	if dungeon.IsWalkable(newX, newY) {
+		player.X = newX
+		player.Y = newY
 	}
 }
 
