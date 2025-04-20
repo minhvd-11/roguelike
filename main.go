@@ -9,10 +9,14 @@ import (
 	"roguelike/dungeon"
 	"roguelike/entities"
 
+	"slices"
+
 	"github.com/gdamore/tcell/v2"
 )
 
 var enemies []*entities.Enemy
+
+var potions []*entities.Potion
 
 func main() {
 	screen, err := tcell.NewScreen()
@@ -32,12 +36,24 @@ func main() {
 	player := entities.NewPlayer(playerX, playerY)
 
 	// Spawn enemies
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		for {
 			ex := rand.Intn(dungeon.MapWidth)
 			ey := rand.Intn(dungeon.MapHeight)
 			if dungeon.IsWalkable(ex, ey) && (ex != player.X || ey != player.Y) {
 				enemies = append(enemies, entities.NewEnemy(ex, ey))
+				break
+			}
+		}
+	}
+
+	//spawn potions
+	for range 3 {
+		for {
+			x := rand.Intn(dungeon.MapWidth)
+			y := rand.Intn(dungeon.MapHeight)
+			if dungeon.IsWalkable(x, y) && (x != player.X || y != player.Y) {
+				potions = append(potions, &entities.Potion{X: x, Y: y})
 				break
 			}
 		}
@@ -57,6 +73,10 @@ func main() {
 			if e.IsAlive() {
 				screen.SetContent(e.X, e.Y, e.Symbol, nil, style)
 			}
+		}
+
+		for _, p := range potions {
+			screen.SetContent(p.X, p.Y, '!', nil, style)
 		}
 
 		// Draw player HP
@@ -126,6 +146,20 @@ func tryMovePlayer(player *entities.Player, dx, dy int) {
 		if e.X == newX && e.Y == newY && e.IsAlive() {
 			e.HP -= 1
 			return // attack instead of moving
+		}
+	}
+
+	for i, p := range potions {
+		if p.X == newX && p.Y == newY {
+			if player.HP < 10 {
+				player.HP += 3
+				if player.HP > 10 {
+					player.HP = 10
+				}
+			}
+
+			potions = slices.Delete(potions, i, i+1)
+			break
 		}
 	}
 
