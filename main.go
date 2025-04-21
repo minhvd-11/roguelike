@@ -20,6 +20,9 @@ var enemies []*entities.Enemy
 
 var potions []*entities.Potion
 
+var inventory []string
+var showInventory bool
+
 func main() {
 	screen, err := tcell.NewScreen()
 	if err != nil {
@@ -38,7 +41,7 @@ func main() {
 	player := entities.NewPlayer(playerX, playerY)
 
 	// Spawn enemies
-	for range 5 {
+	for range 3 {
 		for {
 			ex := rand.Intn(dungeon.MapWidth)
 			ey := rand.Intn(dungeon.MapHeight)
@@ -77,7 +80,7 @@ func main() {
 			}
 		}
 
-		//draw potions
+		// Draw potions
 		for _, p := range potions {
 			screen.SetContent(p.X, p.Y, '!', nil, style)
 		}
@@ -92,6 +95,20 @@ func main() {
 		for i, msg := range logMessages {
 			for j, ch := range msg {
 				screen.SetContent(j, logY+i, ch, nil, style)
+			}
+		}
+
+		// Inventory UI
+		if showInventory {
+			invTitle := "Inventory:"
+			for i, ch := range invTitle {
+				screen.SetContent(i, 0, ch, nil, style)
+			}
+
+			for i, item := range inventory {
+				for j, ch := range item {
+					screen.SetContent(j, i+1, ch, nil, style)
+				}
 			}
 		}
 
@@ -117,6 +134,15 @@ func main() {
 				tryMovePlayer(player, -1, 0)
 			case tcell.KeyRight:
 				tryMovePlayer(player, 1, 0)
+			case 'i':
+				showInventory = !showInventory
+				addLog("Open Inventory")
+			}
+
+			switch ev.Rune() {
+			case 'i':
+				showInventory = !showInventory
+				addLog("Toggled inventory")
 			}
 		}
 
@@ -132,6 +158,8 @@ func main() {
 				}
 			}
 		}
+
+		dungeon.UpdateVisibility(player.X, player.Y)
 	}
 
 	// Show death message
@@ -164,7 +192,7 @@ func tryMovePlayer(player *entities.Player, dx, dy int) {
 	// Check for enemy at target location
 	for _, e := range enemies {
 		if e.X == newX && e.Y == newY && e.IsAlive() {
-			e.HP -= 1
+			e.HP -= 3
 			addLog("Enemy -1 HP!")
 			if e.HP == 0 {
 				addLog("You killed an enemy!")
@@ -182,8 +210,10 @@ func tryMovePlayer(player *entities.Player, dx, dy int) {
 				}
 			}
 
-			addLog("You picked up and drank a health potion.")
 			potions = slices.Delete(potions, i, i+1)
+
+			inventory = append(inventory, "Health Potion")
+			addLog("You picked up and drank a health potion.")
 			break
 		}
 	}
@@ -197,7 +227,12 @@ func tryMovePlayer(player *entities.Player, dx, dy int) {
 func drawMap(screen tcell.Screen, style tcell.Style) {
 	for y, row := range dungeon.GameMap {
 		for x, ch := range row {
-			screen.SetContent(x, y, ch, nil, style)
+			if dungeon.Visible[y][x] {
+				screen.SetContent(x, y, ch, nil, style)
+			} else {
+				screen.SetContent(x, y, ' ', nil, style)
+			}
+
 		}
 	}
 }

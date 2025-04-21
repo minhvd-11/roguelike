@@ -16,6 +16,8 @@ const (
 
 var GameMap [][]rune
 
+var Visible [][]bool
+
 type Room struct {
 	X1, Y1, X2, Y2 int
 }
@@ -40,6 +42,11 @@ func GenerateDungeon() (int, int) {
 		for x := range GameMap[y] {
 			GameMap[y][x] = '#'
 		}
+	}
+
+	Visible = make([][]bool, MapHeight)
+	for y := range MapHeight {
+		Visible[y] = make([]bool, MapWidth)
 	}
 
 	for range MaxRooms {
@@ -115,4 +122,22 @@ func IsWalkable(x, y int) bool {
 		return false
 	}
 	return GameMap[y][x] != '#'
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+func UpdateVisibility(px, py int) {
+	for y := range MapHeight {
+		for x := range MapWidth {
+			dist := abs(px-x) + abs(py-y)
+			if dist <= 6 {
+				Visible[y][x] = true
+			}
+		}
+	}
 }
