@@ -23,6 +23,8 @@ var potions []*entities.Potion
 var inventory []string
 var showInventory bool
 
+var floor int = 1
+
 func main() {
 	screen, err := tcell.NewScreen()
 	if err != nil {
@@ -222,6 +224,21 @@ func tryMovePlayer(player *entities.Player, dx, dy int) {
 		player.X = newX
 		player.Y = newY
 	}
+
+	tile := dungeon.GameMap[player.Y][player.X]
+	if tile == '>' {
+		floor++
+		addLog("You descend to floor " + strconv.Itoa(floor) + "...")
+		dungeon.GenerateDungeon()
+		player.X = 2
+		player.Y = 2
+		dungeon.UpdateVisibility(player.X, player.Y)
+
+		// Respawn enemies & potions
+		enemies = spawnEnemies(5)
+		potions = spawnPotions(3)
+	}
+
 }
 
 func drawMap(screen tcell.Screen, style tcell.Style) {
@@ -259,4 +276,21 @@ func addLog(msg string) {
 	if len(logMessages) > 3 {
 		logMessages = logMessages[1:] // keep last 3 messages
 	}
+}
+
+func spawnEnemies(n int) []*entities.Enemy {
+	var list []*entities.Enemy
+	for i := 0; i < n; i++ {
+		e := entities.NewEnemy(dungeon.RandomFloorTile())
+		list = append(list, e)
+	}
+	return list
+}
+
+func spawnPotions(n int) []*entities.Potion {
+	var list []*entities.Potion
+	for i := 0; i < n; i++ {
+		list = append(list, entities.NewPotion(dungeon.RandomFloorTile()))
+	}
+	return list
 }

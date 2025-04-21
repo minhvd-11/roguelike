@@ -78,6 +78,9 @@ func GenerateDungeon() (int, int) {
 
 			rooms = append(rooms, newRoom)
 		}
+
+		GameMap[MapHeight-2][MapWidth-2] = '>'
+
 	}
 
 	return playerX, playerY
@@ -138,6 +141,16 @@ func UpdateVisibility(px, py int) {
 			if dist <= 6 {
 				Visible[y][x] = true
 			}
+		}
+	}
+}
+
+func RandomFloorTile() (int, int) {
+	for {
+		x := rand.Intn(MapWidth)
+		y := rand.Intn(MapHeight)
+		if GameMap[y][x] == '.' {
+			return x, y
 		}
 	}
 }

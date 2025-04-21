@@ -1,6 +1,10 @@
 package entities
 
 type Potion struct {
-	X int
-	Y int
+	X, Y   int
+	Symbol rune
+}
+
+func NewPotion(x, y int) *Potion {
+	return &Potion{X: x, Y: y, Symbol: '!'}
 }
