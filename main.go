@@ -18,7 +18,9 @@ var logMessages []string
 
 var enemies []*entities.Enemy
 
-var potions []*entities.Potion
+var potions []entities.Potion
+
+var player *entities.Player
 
 var inventory []string
 var showInventory bool
@@ -39,32 +41,10 @@ func main() {
 	style := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorWhite)
 
 	rand.Seed(time.Now().UnixNano())
-	playerX, playerY := dungeon.GenerateDungeon()
-	player := entities.NewPlayer(playerX, playerY)
+	player = entities.NewPlayer(dungeon.GenerateDungeon())
 
-	// Spawn enemies
-	for range 3 {
-		for {
-			ex := rand.Intn(dungeon.MapWidth)
-			ey := rand.Intn(dungeon.MapHeight)
-			if dungeon.IsWalkable(ex, ey) && (ex != player.X || ey != player.Y) {
-				enemies = append(enemies, entities.NewEnemy(ex, ey))
-				break
-			}
-		}
-	}
-
-	//spawn potions
-	for range 3 {
-		for {
-			x := rand.Intn(dungeon.MapWidth)
-			y := rand.Intn(dungeon.MapHeight)
-			if dungeon.IsWalkable(x, y) && (x != player.X || y != player.Y) {
-				potions = append(potions, &entities.Potion{X: x, Y: y})
-				break
-			}
-		}
-	}
+	enemies = spawnEnemies(5)
+	potions = spawnPotions(3)
 
 	for {
 		screen.Clear()
@@ -129,22 +109,20 @@ func main() {
 			case tcell.KeyEscape:
 				return
 			case tcell.KeyUp:
-				tryMovePlayer(player, 0, -1)
+				tryMovePlayer(0, -1)
 			case tcell.KeyDown:
-				tryMovePlayer(player, 0, 1)
+				tryMovePlayer(0, 1)
 			case tcell.KeyLeft:
-				tryMovePlayer(player, -1, 0)
+				tryMovePlayer(-1, 0)
 			case tcell.KeyRight:
-				tryMovePlayer(player, 1, 0)
-			case 'i':
-				showInventory = !showInventory
-				addLog("Open Inventory")
+				tryMovePlayer(1, 0)
 			}
-
 			switch ev.Rune() {
 			case 'i':
 				showInventory = !showInventory
 				addLog("Toggled inventory")
+			case 'h':
+				usePotion()
 			}
 		}
 
@@ -187,7 +165,49 @@ func abs(n int) int {
 	return n
 }
 
-func tryMovePlayer(player *entities.Player, dx, dy int) {
+func checkForPotionPickup() {
+	for i := range potions {
+		if potions[i].X == player.X && potions[i].Y == player.Y {
+			inventory = append(inventory, "Health Potion")
+			addLog("You picked up a health potion.")
+			potions = slices.Delete(potions, i, i+1)
+			return
+		}
+	}
+}
+
+func checkForStairs() {
+	tile := dungeon.GameMap[player.Y][player.X]
+	if tile == '>' {
+		floor++
+		addLog("You descend to floor " + strconv.Itoa(floor))
+		player.X, player.Y = dungeon.GenerateDungeon()
+		enemies = spawnEnemies(5)
+		potions = spawnPotions(3)
+		dungeon.UpdateVisibility(player.X, player.Y)
+	}
+}
+
+func usePotion() {
+	for i, item := range inventory {
+		if item == "Health Potion" {
+			if player.HP < player.MaxHP {
+				player.HP += 5
+				if player.HP > player.MaxHP {
+					player.HP = player.MaxHP
+				}
+				inventory = slices.Delete(inventory, i, i+1)
+				addLog("You drink a health potion.")
+			} else {
+				addLog("You're already at full health.")
+			}
+			return
+		}
+	}
+	addLog("You have no potions.")
+}
+
+func tryMovePlayer(dx, dy int) {
 	newX := player.X + dx
 	newY := player.Y + dy
 
@@ -203,41 +223,13 @@ func tryMovePlayer(player *entities.Player, dx, dy int) {
 		}
 	}
 
-	for i, p := range potions {
-		if p.X == newX && p.Y == newY {
-			if player.HP < 10 {
-				player.HP += 3
-				if player.HP > 10 {
-					player.HP = 10
-				}
-			}
-
-			potions = slices.Delete(potions, i, i+1)
-
-			inventory = append(inventory, "Health Potion")
-			addLog("You picked up and drank a health potion.")
-			break
-		}
-	}
-
 	if dungeon.IsWalkable(newX, newY) {
 		player.X = newX
 		player.Y = newY
 	}
 
-	tile := dungeon.GameMap[player.Y][player.X]
-	if tile == '>' {
-		floor++
-		addLog("You descend to floor " + strconv.Itoa(floor) + "...")
-		dungeon.GenerateDungeon()
-		player.X = 2
-		player.Y = 2
-		dungeon.UpdateVisibility(player.X, player.Y)
-
-		// Respawn enemies & potions
-		enemies = spawnEnemies(5)
-		potions = spawnPotions(3)
-	}
+	checkForPotionPickup()
+	checkForStairs()
 
 }
 
@@ -254,7 +246,7 @@ func drawMap(screen tcell.Screen, style tcell.Style) {
 	}
 }
 
-func isOccupied(x, y int, player *entities.Player, enemies []*entities.Enemy, potions []*entities.Potion) bool {
+func isOccupied(x, y int, player *entities.Player, enemies []*entities.Enemy, potions []entities.Potion) bool {
 	if x == player.X && y == player.Y {
 		return true
 	}
@@ -280,16 +272,16 @@ func addLog(msg string) {
 
 func spawnEnemies(n int) []*entities.Enemy {
 	var list []*entities.Enemy
-	for i := 0; i < n; i++ {
+	for range n {
 		e := entities.NewEnemy(dungeon.RandomFloorTile())
 		list = append(list, e)
 	}
 	return list
 }
 
-func spawnPotions(n int) []*entities.Potion {
-	var list []*entities.Potion
-	for i := 0; i < n; i++ {
+func spawnPotions(n int) []entities.Potion {
+	var list []entities.Potion
+	for range n {
 		list = append(list, entities.NewPotion(dungeon.RandomFloorTile()))
 	}
 	return list

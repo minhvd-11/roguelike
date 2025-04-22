@@ -5,6 +5,6 @@ type Potion struct {
 	Symbol rune
 }
 
-func NewPotion(x, y int) *Potion {
-	return &Potion{X: x, Y: y, Symbol: '!'}
+func NewPotion(x, y int) Potion {
+	return Potion{X: x, Y: y, Symbol: '!'}
 }

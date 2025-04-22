@@ -79,7 +79,7 @@ func GenerateDungeon() (int, int) {
 			rooms = append(rooms, newRoom)
 		}
 
-		GameMap[MapHeight-2][MapWidth-2] = '>'
+		GameMap[MapHeight-10][MapWidth-10] = '>'
 
 	}
 
