@@ -19,6 +19,7 @@ var logMessages []string
 var enemies []*entities.Enemy
 
 var potions []entities.Potion
+var golds []entities.Gold
 
 var player *entities.Player
 
@@ -26,6 +27,8 @@ var inventory []string
 var showInventory bool
 
 var floor int = 1
+
+var playerWasHitLastTurn bool
 
 func main() {
 	screen, err := tcell.NewScreen()
@@ -45,6 +48,7 @@ func main() {
 
 	enemies = spawnEnemies(5)
 	potions = spawnPotions(3)
+	golds = spawnGold(5)
 
 	for {
 		screen.Clear()
@@ -53,7 +57,12 @@ func main() {
 		drawMap(screen, style)
 
 		// Draw player
-		screen.SetContent(player.X, player.Y, '@', nil, style)
+		playerStyle := style
+		if playerWasHitLastTurn {
+			playerStyle = playerStyle.Foreground(tcell.ColorRed)
+			playerWasHitLastTurn = false
+		}
+		screen.SetContent(player.X, player.Y, '@', nil, playerStyle)
 
 		// Draw enemies
 		for _, e := range enemies {
@@ -64,7 +73,24 @@ func main() {
 
 		// Draw potions
 		for _, p := range potions {
-			screen.SetContent(p.X, p.Y, '!', nil, style)
+			screen.SetContent(p.X, p.Y, p.Symbol, nil, style)
+		}
+
+		// Draw golds
+		for _, g := range golds {
+			screen.SetContent(g.X, g.Y, g.Symbol, nil, style)
+		}
+
+		goldCount := 0
+		for _, item := range inventory {
+			if item == "Gold" {
+				goldCount++
+			}
+		}
+
+		goldStr := "Gold: x" + strconv.Itoa(goldCount)
+		for i, r := range goldStr {
+			screen.SetContent(i+15, dungeon.MapHeight, r, nil, style)
 		}
 
 		// Draw player HP
@@ -87,11 +113,23 @@ func main() {
 				screen.SetContent(i, 0, ch, nil, style)
 			}
 
-			for i, item := range inventory {
-				for j, ch := range item {
-					screen.SetContent(j, i+1, ch, nil, style)
+			hpsCount := 0
+			for _, item := range inventory {
+				if item == "Health Potion" {
+					hpsCount++
 				}
 			}
+
+			for _, item := range inventory {
+				if item == "Health Potion" {
+					hpsStr := "Health Potion: " + strconv.Itoa(hpsCount)
+					for j, ch := range hpsStr {
+						screen.SetContent(j, 1, ch, nil, style)
+					}
+					break
+				}
+			}
+
 		}
 
 		screen.Show()
@@ -133,6 +171,7 @@ func main() {
 					return isOccupied(x, y, player, enemies, potions)
 				})
 				if abs(e.X-player.X)+abs(e.Y-player.Y) == 1 {
+					playerWasHitLastTurn = true
 					player.HP -= 1
 					addLog("-1 HP from enemy attack!")
 				}
@@ -176,6 +215,17 @@ func checkForPotionPickup() {
 	}
 }
 
+func checkForGoldCollect() {
+	for i := range golds {
+		if golds[i].X == player.X && golds[i].Y == player.Y {
+			inventory = append(inventory, "Gold")
+			addLog("You collect 1 gold.")
+			golds = slices.Delete(golds, i, i+1)
+			return
+		}
+	}
+}
+
 func checkForStairs() {
 	tile := dungeon.GameMap[player.Y][player.X]
 	if tile == '>' {
@@ -214,9 +264,9 @@ func tryMovePlayer(dx, dy int) {
 	// Check for enemy at target location
 	for _, e := range enemies {
 		if e.X == newX && e.Y == newY && e.IsAlive() {
-			e.HP -= 3
-			addLog("Enemy -1 HP!")
-			if e.HP == 0 {
+			e.HP -= 2
+			addLog("Enemy -2 HP. (" + strconv.Itoa(e.HP) + " HP left)")
+			if e.HP <= 0 {
 				addLog("You killed an enemy!")
 			}
 			return // attack instead of moving
@@ -230,6 +280,7 @@ func tryMovePlayer(dx, dy int) {
 
 	checkForPotionPickup()
 	checkForStairs()
+	checkForGoldCollect()
 
 }
 
@@ -283,6 +334,14 @@ func spawnPotions(n int) []entities.Potion {
 	var list []entities.Potion
 	for range n {
 		list = append(list, entities.NewPotion(dungeon.RandomFloorTile()))
+	}
+	return list
+}
+
+func spawnGold(n int) []entities.Gold {
+	var list []entities.Gold
+	for range n {
+		list = append(list, entities.NewGold(dungeon.RandomFloorTile()))
 	}
 	return list
 }
