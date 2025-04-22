@@ -120,14 +120,9 @@ func main() {
 				}
 			}
 
-			for _, item := range inventory {
-				if item == "Health Potion" {
-					hpsStr := "Health Potion: " + strconv.Itoa(hpsCount)
-					for j, ch := range hpsStr {
-						screen.SetContent(j, 1, ch, nil, style)
-					}
-					break
-				}
+			hpsStr := "Health Potion: x" + strconv.Itoa(hpsCount)
+			for j, ch := range hpsStr {
+				screen.SetContent(j, 1, ch, nil, style)
 			}
 
 		}
