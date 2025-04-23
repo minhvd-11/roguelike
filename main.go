@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"roguelike/dungeon"
-	"roguelike/entities"
+	"roguelike/game/dungeon"
+	"roguelike/game/entities"
 
 	"slices"
 

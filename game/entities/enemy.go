@@ -2,7 +2,7 @@ package entities
 
 import (
 	"math/rand"
-	"roguelike/dungeon"
+	"roguelike/game/dungeon"
 )
 
 type Enemy struct {
