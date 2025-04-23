@@ -20,6 +20,7 @@ var enemies []*entities.Enemy
 
 var potions []entities.Potion
 var golds []entities.Gold
+var equipment []entities.Equipment
 
 var player *entities.Player
 
@@ -49,6 +50,7 @@ func main() {
 	enemies = spawnEnemies(5)
 	potions = spawnPotions(3)
 	golds = spawnGold(5)
+	equipment = spawnEquipment(2)
 
 	for {
 		screen.Clear()
@@ -93,6 +95,11 @@ func main() {
 			screen.SetContent(i+15, dungeon.MapHeight, r, nil, style)
 		}
 
+		//Draw equipments
+		for _, eq := range equipment {
+			screen.SetContent(eq.X, eq.Y, eq.Symbol, nil, style)
+		}
+
 		// Draw player HP
 		hpStr := "HP: " + strconv.Itoa(player.HP)
 		for i, r := range hpStr {
@@ -113,6 +120,13 @@ func main() {
 				screen.SetContent(i, 0, ch, nil, style)
 			}
 
+			if player.Equipped["Sword"] {
+				drawStr(screen, "Equipped: Sword", 2)
+			}
+			if player.Equipped["Shield"] {
+				drawStr(screen, "Equipped: Shield", 3)
+			}
+
 			hpsCount := 0
 			for _, item := range inventory {
 				if item == "Health Potion" {
@@ -120,11 +134,12 @@ func main() {
 				}
 			}
 
-			hpsStr := "Health Potion: x" + strconv.Itoa(hpsCount)
-			for j, ch := range hpsStr {
-				screen.SetContent(j, 1, ch, nil, style)
+			if hpsCount > 0 {
+				hpsStr := "Health Potion: x" + strconv.Itoa(hpsCount)
+				for j, ch := range hpsStr {
+					screen.SetContent(j, 1, ch, nil, style)
+				}
 			}
-
 		}
 
 		screen.Show()
@@ -156,6 +171,9 @@ func main() {
 				addLog("Toggled inventory")
 			case 'h':
 				usePotion()
+			case 'e':
+				handleEquip("Sword")
+				handleEquip("Shield")
 			}
 		}
 
@@ -167,8 +185,9 @@ func main() {
 				})
 				if abs(e.X-player.X)+abs(e.Y-player.Y) == 1 {
 					playerWasHitLastTurn = true
-					player.HP -= 1
-					addLog("-1 HP from enemy attack!")
+					damage := max(1-player.Def, 0)
+					player.HP -= damage
+					addLog("-" + strconv.Itoa(damage) + " HP from enemy attack!")
 				}
 			}
 		}
@@ -221,6 +240,18 @@ func checkForGoldCollect() {
 	}
 }
 
+func checkForEquipmentPickup() {
+	for i := range equipment {
+		if equipment[i].X == player.X && equipment[i].Y == player.Y {
+			item := equipment[i]
+			inventory = append(inventory, item.Name)
+			addLog("You picked up a " + item.Name + ".")
+			equipment = slices.Delete(equipment, i, i+1)
+			return
+		}
+	}
+}
+
 func checkForStairs() {
 	tile := dungeon.GameMap[player.Y][player.X]
 	if tile == '>' {
@@ -252,6 +283,24 @@ func usePotion() {
 	addLog("You have no potions.")
 }
 
+func handleEquip(item string) {
+	for i, it := range inventory {
+		if it == item && !player.Equipped[item] {
+			player.Equipped[item] = true
+			inventory = slices.Delete(inventory, i, i+1)
+			if item == "Sword" {
+				player.Atk += 2
+				addLog("You equipped a Sword. (+2 ATK)")
+			} else if item == "Shield" {
+				player.Def += 1
+				addLog("You equipped a Shield. (+1 DEF)")
+			}
+			return
+		}
+	}
+	addLog("No " + item + " in inventory.")
+}
+
 func tryMovePlayer(dx, dy int) {
 	newX := player.X + dx
 	newY := player.Y + dy
@@ -259,8 +308,8 @@ func tryMovePlayer(dx, dy int) {
 	// Check for enemy at target location
 	for _, e := range enemies {
 		if e.X == newX && e.Y == newY && e.IsAlive() {
-			e.HP -= 2
-			addLog("Enemy -2 HP. (" + strconv.Itoa(e.HP) + " HP left)")
+			e.HP -= player.Atk
+			addLog("Enemy -" + strconv.Itoa(player.Atk) + " HP. (" + strconv.Itoa(e.HP) + " HP left)")
 			if e.HP <= 0 {
 				addLog("You killed an enemy!")
 			}
@@ -276,7 +325,7 @@ func tryMovePlayer(dx, dy int) {
 	checkForPotionPickup()
 	checkForStairs()
 	checkForGoldCollect()
-
+	checkForEquipmentPickup()
 }
 
 func drawMap(screen tcell.Screen, style tcell.Style) {
@@ -289,6 +338,12 @@ func drawMap(screen tcell.Screen, style tcell.Style) {
 			}
 
 		}
+	}
+}
+
+func drawStr(screen tcell.Screen, s string, y int) {
+	for i, ch := range s {
+		screen.SetContent(i, y, ch, nil, tcell.StyleDefault)
 	}
 }
 
@@ -337,6 +392,17 @@ func spawnGold(n int) []entities.Gold {
 	var list []entities.Gold
 	for range n {
 		list = append(list, entities.NewGold(dungeon.RandomFloorTile()))
+	}
+	return list
+}
+
+func spawnEquipment(n int) []entities.Equipment {
+	var list []entities.Equipment
+	items := []string{"Sword", "Shield"}
+	for i := range n {
+		name := items[i%len(items)]
+		x, y := dungeon.RandomFloorTile()
+		list = append(list, entities.NewEquipment(name, x, y))
 	}
 	return list
 }
