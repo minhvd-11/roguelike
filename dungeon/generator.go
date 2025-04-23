@@ -3,19 +3,19 @@ package dungeon
 import (
 	"math/rand"
 	"slices"
+	"sort"
 	"time"
 )
 
 const (
-	MapWidth    = 80
-	MapHeight   = 24
+	MapWidth    = 40 // narrower
+	MapHeight   = 40 // taller
 	MaxRooms    = 8
 	RoomMinSize = 5
 	RoomMaxSize = 10
 )
 
 var GameMap [][]rune
-
 var Visible [][]bool
 
 type Room struct {
@@ -60,6 +60,7 @@ func GenerateDungeon() (int, int) {
 
 		if !intersects {
 			createRoom(newRoom)
+
 			if len(rooms) > 0 {
 				prev := rooms[len(rooms)-1]
 				prevX, prevY := prev.Center()
@@ -72,15 +73,21 @@ func GenerateDungeon() (int, int) {
 					createVTunnel(prevY, newY, prevX)
 					createHTunnel(prevX, newX, newY)
 				}
-			} else {
-				playerX, playerY = newRoom.Center()
 			}
-
 			rooms = append(rooms, newRoom)
 		}
+	}
 
-		GameMap[MapHeight-10][MapWidth-10] = '>'
+	if len(rooms) >= 2 {
+		// Sort top to bottom (smallest Y first)
+		sort.Slice(rooms, func(i, j int) bool {
+			return rooms[i].Y1 < rooms[j].Y1
+		})
 
+		stairsX, stairsY := rooms[0].Center()           // top
+		playerX, playerY = rooms[len(rooms)-1].Center() // bottom
+
+		GameMap[stairsY][stairsX] = '>'
 	}
 
 	return playerX, playerY

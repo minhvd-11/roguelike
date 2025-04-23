@@ -106,6 +106,11 @@ func main() {
 			screen.SetContent(i, dungeon.MapHeight, r, nil, style)
 		}
 
+		levelStr := "Lvl: " + strconv.Itoa(player.Level) + "  XP: " + strconv.Itoa(player.XP) + "/" + strconv.Itoa(player.XPToNextLevel)
+		for i, r := range levelStr {
+			screen.SetContent(i+30, dungeon.MapHeight, r, nil, style)
+		}
+
 		logY := dungeon.MapHeight + 1
 		for i, msg := range logMessages {
 			for j, ch := range msg {
@@ -301,6 +306,22 @@ func handleEquip(item string) {
 	addLog("No " + item + " in inventory.")
 }
 
+func checkLevelUp() {
+	for player.XP >= player.XPToNextLevel {
+		player.XP -= player.XPToNextLevel
+		player.Level++
+		player.XPToNextLevel += 5
+
+		player.MaxHP += 3
+		player.HP = player.MaxHP
+		player.Atk += 1
+		player.Def += 1
+
+		addLog("LEVEL UP! You are now level " + strconv.Itoa(player.Level) + "!")
+		addLog("+3 MaxHP, +1 ATK, +1 DEF")
+	}
+}
+
 func tryMovePlayer(dx, dy int) {
 	newX := player.X + dx
 	newY := player.Y + dy
@@ -312,6 +333,9 @@ func tryMovePlayer(dx, dy int) {
 			addLog("Enemy -" + strconv.Itoa(player.Atk) + " HP. (" + strconv.Itoa(e.HP) + " HP left)")
 			if e.HP <= 0 {
 				addLog("You killed an enemy!")
+				player.XP += 5
+				addLog("You gained 5 XP. (" + strconv.Itoa(player.XP) + "/" + strconv.Itoa(player.XPToNextLevel) + ")")
+				checkLevelUp()
 			}
 			return // attack instead of moving
 		}
