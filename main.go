@@ -20,7 +20,7 @@ var enemies []*entities.Enemy
 
 var potions []entities.Potion
 var golds []entities.Gold
-var equipment []entities.Equipment
+var equipments []entities.Equipment
 
 var player *entities.Player
 
@@ -50,7 +50,7 @@ func main() {
 	enemies = spawnEnemies(5)
 	potions = spawnPotions(3)
 	golds = spawnGold(5)
-	equipment = spawnEquipment(2)
+	equipments = spawnEquipment(2)
 
 	for {
 		screen.Clear()
@@ -96,7 +96,7 @@ func main() {
 		}
 
 		//Draw equipments
-		for _, eq := range equipment {
+		for _, eq := range equipments {
 			screen.SetContent(eq.X, eq.Y, eq.Symbol, nil, style)
 		}
 
@@ -184,16 +184,38 @@ func main() {
 
 		// Enemy movement and attack
 		for _, e := range enemies {
-			if e.IsAlive() {
-				e.MoveToward(player.X, player.Y, func(x, y int) bool {
-					return isOccupied(x, y, player, enemies, potions)
-				})
-				if abs(e.X-player.X)+abs(e.Y-player.Y) == 1 {
-					playerWasHitLastTurn = true
-					damage := max(1-player.Def, 0)
-					player.HP -= damage
-					addLog("-" + strconv.Itoa(damage) + " HP from enemy attack!")
-				}
+			if !e.IsAlive() {
+				continue
+			}
+
+			e.TickCount++
+			if e.TickCount%e.Speed != 0 {
+				continue // wait based on speed
+			}
+
+			// Skeleton ranged attack
+			if e.Type == "skeleton" && e.Cooldown <= 0 && abs(e.X-player.X)+abs(e.Y-player.Y) <= 6 {
+				playerWasHitLastTurn = true
+				player.HP -= 1
+				addLog("An arrow hits you! -1 HP")
+				e.Cooldown = 3
+				continue
+			}
+			if e.Type == "skeleton" {
+				e.Cooldown--
+			}
+
+			// Move toward player
+			e.MoveToward(player.X, player.Y, func(x, y int) bool {
+				return isOccupied(x, y, player, enemies, potions, golds, equipments)
+			})
+
+			// Melee attack
+			if abs(e.X-player.X)+abs(e.Y-player.Y) == 1 {
+				playerWasHitLastTurn = true
+				damage := max(1-player.Def, 1)
+				player.HP -= damage
+				addLog("-" + strconv.Itoa(damage) + " HP from " + e.Type + "!")
 			}
 		}
 
@@ -246,12 +268,12 @@ func checkForGoldCollect() {
 }
 
 func checkForEquipmentPickup() {
-	for i := range equipment {
-		if equipment[i].X == player.X && equipment[i].Y == player.Y {
-			item := equipment[i]
+	for i := range equipments {
+		if equipments[i].X == player.X && equipments[i].Y == player.Y {
+			item := equipments[i]
 			inventory = append(inventory, item.Name)
 			addLog("You picked up a " + item.Name + ".")
-			equipment = slices.Delete(equipment, i, i+1)
+			equipments = slices.Delete(equipments, i, i+1)
 			return
 		}
 	}
@@ -330,13 +352,32 @@ func tryMovePlayer(dx, dy int) {
 	for _, e := range enemies {
 		if e.X == newX && e.Y == newY && e.IsAlive() {
 			e.HP -= player.Atk
-			addLog("Enemy -" + strconv.Itoa(player.Atk) + " HP. (" + strconv.Itoa(e.HP) + " HP left)")
+			addLog("Enemy -" + strconv.Itoa(player.Atk) + " HP. (" + strconv.Itoa(max(e.HP, 0)) + "/" + strconv.Itoa(e.MaxHP) + ")")
 			if e.HP <= 0 {
-				addLog("You killed an enemy!")
-				player.XP += 5
-				addLog("You gained 5 XP. (" + strconv.Itoa(player.XP) + "/" + strconv.Itoa(player.XPToNextLevel) + ")")
+				addLog("You killed a " + e.Type + "!")
+				player.XP += e.XPGain
+				addLog("You gained" + strconv.Itoa(e.XPGain) + " XP. (" + strconv.Itoa(player.XP) + "/" + strconv.Itoa(player.XPToNextLevel) + ")")
+
+				// Slime splits!
+				if e.Type == "Slime" && e.CanSplit {
+					spawnBaby := func(dx, dy int) {
+						nx, ny := e.X+dx, e.Y+dy
+						splitStats := e.MaxHP / 2
+						if dungeon.IsWalkable(nx, ny) && !isOccupied(nx, ny, player, enemies, potions, golds, equipments) {
+							enemies = append(enemies, &entities.Enemy{
+								X: nx, Y: ny, Type: "Slime", HP: splitStats, MaxHP: splitStats, Symbol: 's', Speed: 1, CanSplit: splitStats > 0, XPGain: splitStats / 2,
+							})
+							addLog("A Baby Slime emerges!")
+						}
+					}
+					spawnBaby(1, 0)
+					spawnBaby(-1, 0)
+				}
+
+				e.HP = 0 // mark as dead
 				checkLevelUp()
 			}
+
 			return // attack instead of moving
 		}
 	}
@@ -371,7 +412,7 @@ func drawStr(screen tcell.Screen, s string, y int) {
 	}
 }
 
-func isOccupied(x, y int, player *entities.Player, enemies []*entities.Enemy, potions []entities.Potion) bool {
+func isOccupied(x, y int, player *entities.Player, enemies []*entities.Enemy, potions []entities.Potion, golds []entities.Gold, equipment []entities.Equipment) bool {
 	if x == player.X && y == player.Y {
 		return true
 	}
@@ -382,6 +423,16 @@ func isOccupied(x, y int, player *entities.Player, enemies []*entities.Enemy, po
 	}
 	for _, p := range potions {
 		if p.X == x && p.Y == y {
+			return true
+		}
+	}
+	for _, g := range golds {
+		if g.X == x && g.Y == y {
+			return true
+		}
+	}
+	for _, eq := range equipment {
+		if eq.X == x && eq.Y == y {
 			return true
 		}
 	}

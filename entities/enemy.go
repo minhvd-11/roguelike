@@ -1,17 +1,39 @@
 package entities
 
 import (
+	"math/rand"
 	"roguelike/dungeon"
 )
 
 type Enemy struct {
-	X, Y   int
-	Symbol rune
-	HP     int
+	X, Y                       int
+	Symbol                     rune
+	Type                       string
+	HP, MaxHP, Speed, Cooldown int
+	TickCount                  int
+	IsRanged, CanSplit         bool
+	XPGain                     int
 }
 
 func NewEnemy(x, y int) *Enemy {
-	return &Enemy{X: x, Y: y, Symbol: 'E', HP: 3}
+	types := []string{"Slime", "Bat", "Skeleton"}
+	t := types[rand.Intn(len(types))]
+
+	switch t {
+	case "Slime":
+		return &Enemy{
+			X: x, Y: y, Type: "Slime", HP: 4, MaxHP: 4, Symbol: 'S', Speed: 2, CanSplit: true, XPGain: 2,
+		}
+	case "Bat":
+		return &Enemy{
+			X: x, Y: y, Type: "Bat", HP: 2, MaxHP: 2, Symbol: 'B', Speed: 1, XPGain: 1,
+		}
+	case "Skeleton":
+		return &Enemy{
+			X: x, Y: y, Type: "Skeleton", HP: 3, MaxHP: 3, Symbol: 'K', Speed: 2, Cooldown: 3, IsRanged: true, XPGain: 1,
+		}
+	}
+	return &Enemy{X: x, Y: y, HP: 3, Symbol: 'e'}
 }
 
 // Check if enemy is alive
