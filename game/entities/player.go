@@ -11,6 +11,11 @@ type Sprite struct {
 	X, Y float64
 }
 
+type Player struct {
+	*Sprite
+	HP, MaxHP uint
+}
+
 func (s *Sprite) Draw(screen *ebiten.Image) {
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(s.X, s.Y)

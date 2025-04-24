@@ -5,7 +5,7 @@ type Enemy struct {
 	FollowPlayer bool
 }
 
-func (e *Enemy) Update(player *Sprite) {
+func (e *Enemy) Update(player *Player) {
 	if !e.FollowPlayer {
 		return
 	}
