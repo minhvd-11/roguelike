@@ -1,6 +1,7 @@
 package game
 
 import (
+	"image"
 	"roguelike/assets"
 	"roguelike/game/dungeon"
 	"roguelike/game/entities"
@@ -15,6 +16,43 @@ type Game struct {
 	tilemapJSON *dungeon.TilemapJSON
 	tilemapImg  *ebiten.Image
 	cam         *Camera
+	colliders   []image.Rectangle
+}
+
+func CheckCollisionHorizontal(sprite *entities.Sprite, colliders []image.Rectangle) {
+	for _, collider := range colliders {
+		if collider.Overlaps(image.Rect(
+			int(sprite.X),
+			int(sprite.Y),
+			int(sprite.X)+16,
+			int(sprite.Y)+16,
+		),
+		) {
+			if sprite.Dx > 0 {
+				sprite.X = float64(collider.Min.X) - 16
+			} else if sprite.Dx < 0 {
+				sprite.X = float64(collider.Max.X)
+			}
+		}
+	}
+}
+
+func CheckCollisionVertical(sprite *entities.Sprite, colliders []image.Rectangle) {
+	for _, collider := range colliders {
+		if collider.Overlaps(image.Rect(
+			int(sprite.X),
+			int(sprite.Y),
+			int(sprite.X)+16,
+			int(sprite.Y)+16,
+		),
+		) {
+			if sprite.Dy > 0 {
+				sprite.Y = float64(collider.Min.Y) - 16
+			} else if sprite.Dy < 0 {
+				sprite.Y = float64(collider.Max.Y)
+			}
+		}
+	}
 }
 
 func NewGame() (*Game, error) {
@@ -58,5 +96,8 @@ func NewGame() (*Game, error) {
 		tilemapJSON: tilemapJSON,
 		tilemapImg:  tilemapImg,
 		cam:         NewCamera(0, 0),
+		colliders: []image.Rectangle{
+			image.Rect(144, 144, 160, 160),
+		},
 	}, nil
 }

@@ -5,24 +5,43 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 func (g *Game) Update() error {
+	g.player.Dx = 0
+	g.player.Dy = 0
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.player.X += 2
+		g.player.Dx = 2
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.player.X -= 2
+		g.player.Dx = -2
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.player.Y -= 2
+		g.player.Dy = -2
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		g.player.Y += 2
+		g.player.Dy = 2
 	}
 
+	g.player.X += g.player.Dx
+	CheckCollisionHorizontal(g.player.Sprite, g.colliders)
+
+	g.player.Y += g.player.Dy
+	CheckCollisionVertical(g.player.Sprite, g.colliders)
+
 	for _, enemy := range g.enemies {
+		enemy.Dx = 0
+		enemy.Dy = 0
+
 		enemy.Update(g.player)
+
+		enemy.X += enemy.Dx
+		CheckCollisionHorizontal(enemy.Sprite, g.colliders)
+
+		enemy.Update(g.player)
+		enemy.Y += enemy.Dy
+		CheckCollisionVertical(enemy.Sprite, g.colliders)
 	}
 
 	for _, potion := range g.potions {
@@ -126,6 +145,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		)
 
 		opts.GeoM.Reset()
+	}
+
+	for _, collider := range g.colliders {
+		vector.StrokeRect(
+			screen,
+			float32(collider.Min.X)+float32(g.cam.X),
+			float32(collider.Min.Y)+float32(g.cam.Y),
+			float32(collider.Dx()),
+			float32(collider.Dy()),
+			1,
+			color.RGBA{255, 0, 0, 0},
+			true,
+		)
 	}
 }
 
