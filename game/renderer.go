@@ -9,29 +9,36 @@ import (
 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.Player.X += 2
+		g.player.X += 2
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.Player.X -= 2
+		g.player.X -= 2
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.Player.Y -= 2
+		g.player.Y -= 2
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		g.Player.Y += 2
+		g.player.Y += 2
 	}
 
-	for _, enemy := range g.Enemies {
-		enemy.Update(g.Player)
+	for _, enemy := range g.enemies {
+		enemy.Update(g.player)
 	}
 
-	for _, potion := range g.Potions {
-		if g.Player.X == potion.X && g.Player.Y == potion.Y {
-			g.Player.HP = min(g.Player.HP+potion.HealAmount, g.Player.MaxHP)
+	for _, potion := range g.potions {
+		if g.player.X == potion.X && g.player.Y == potion.Y {
+			g.player.HP = min(g.player.HP+potion.HealAmt, g.player.MaxHP)
 			potion.X, potion.Y = -100, -100 // Move potion off-screen after use
 		}
 	}
 
+	g.cam.FollowTarget(g.player.X+8, g.player.Y+8, 320, 540)
+	g.cam.Constraint(
+		float64(g.tilemapJSON.Layers[0].Width*16),
+		float64(g.tilemapJSON.Layers[0].Height*16),
+		320,
+		540,
+	)
 	return nil
 }
 
@@ -63,6 +70,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 			// set the drawimageoptions to draw the tile at x, y
 			opts.GeoM.Translate(float64(x), float64(y))
+			opts.GeoM.Translate(g.cam.X, g.cam.Y)
 
 			// draw the tile
 			screen.DrawImage(
@@ -76,14 +84,48 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	g.Player.Draw(screen)
+	// set the translation of our drawImageOptions to the player's position
+	opts.GeoM.Translate(g.player.X, g.player.Y)
+	opts.GeoM.Translate(g.cam.X, g.cam.Y)
 
-	for _, enemy := range g.Enemies {
-		enemy.Draw(screen)
+	// draw the player
+	screen.DrawImage(
+		// grab a subimage of the spritesheet
+		g.player.Img.SubImage(
+			image.Rect(0, 0, 16, 16),
+		).(*ebiten.Image),
+		&opts,
+	)
+
+	opts.GeoM.Reset()
+
+	for _, sprite := range g.enemies {
+		opts.GeoM.Translate(sprite.X, sprite.Y)
+		opts.GeoM.Translate(g.cam.X, g.cam.Y)
+		screen.DrawImage(
+			sprite.Img.SubImage(
+				image.Rect(0, 0, 16, 16),
+			).(*ebiten.Image),
+			&opts,
+		)
+
+		opts.GeoM.Reset()
 	}
 
-	for _, potion := range g.Potions {
-		potion.Draw(screen)
+	opts.GeoM.Reset()
+
+	for _, sprite := range g.potions {
+		opts.GeoM.Translate(sprite.X, sprite.Y)
+		opts.GeoM.Translate(g.cam.X, g.cam.Y)
+
+		screen.DrawImage(
+			sprite.Img.SubImage(
+				image.Rect(0, 0, 16, 16),
+			).(*ebiten.Image),
+			&opts,
+		)
+
+		opts.GeoM.Reset()
 	}
 }
 

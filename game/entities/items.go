@@ -2,7 +2,7 @@ package entities
 
 type Potion struct {
 	*Sprite
-	HealAmount uint
+	HealAmt uint
 }
 
 type Gold struct {

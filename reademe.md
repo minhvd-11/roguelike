@@ -8,3 +8,4 @@ S3: 5 Phase improvement - S3.1: Dungeon depth and spawn algo - S3.2: Improve use
 
 After reboot with ebiten
 P1: create and render entities, map
+P2: Camera move

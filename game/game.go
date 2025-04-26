@@ -9,11 +9,12 @@ import (
 )
 
 type Game struct {
-	Player      *entities.Player
-	Enemies     []*entities.Enemy
-	Potions     []*entities.Potion
+	player      *entities.Player
+	enemies     []*entities.Enemy
+	potions     []*entities.Potion
 	tilemapJSON *dungeon.TilemapJSON
 	tilemapImg  *ebiten.Image
+	cam         *Camera
 }
 
 func NewGame() (*Game, error) {
@@ -38,7 +39,7 @@ func NewGame() (*Game, error) {
 		return nil, err
 	}
 	return &Game{
-		Player: &entities.Player{
+		player: &entities.Player{
 			Sprite: &entities.Sprite{
 				Img: playerImg,
 				X:   100,
@@ -47,14 +48,15 @@ func NewGame() (*Game, error) {
 			HP:    10,
 			MaxHP: 10,
 		},
-		Enemies: []*entities.Enemy{
+		enemies: []*entities.Enemy{
 			{Sprite: &entities.Sprite{Img: enemyImg, X: 200, Y: 200}, FollowPlayer: true},
 			{Sprite: &entities.Sprite{Img: enemyImg, X: 150, Y: 150}, FollowPlayer: false},
 		},
-		Potions: []*entities.Potion{
-			{Sprite: &entities.Sprite{Img: potionImg, X: 200, Y: 100}, HealAmount: 5},
+		potions: []*entities.Potion{
+			{Sprite: &entities.Sprite{Img: potionImg, X: 200, Y: 100}, HealAmt: 5},
 		},
 		tilemapJSON: tilemapJSON,
 		tilemapImg:  tilemapImg,
+		cam:         NewCamera(0, 0),
 	}, nil
 }
