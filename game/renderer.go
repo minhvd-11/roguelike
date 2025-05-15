@@ -9,8 +9,10 @@ import (
 )
 
 func (g *Game) Update() error {
+
 	g.player.Dx = 0
 	g.player.Dy = 0
+
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		g.player.Dx = 2
 	}
@@ -29,6 +31,11 @@ func (g *Game) Update() error {
 
 	g.player.Y += g.player.Dy
 	CheckCollisionVertical(g.player.Sprite, g.colliders)
+
+	activeAnim := g.player.ActiveAnimation(int(g.player.Dx), int(g.player.Dy))
+	if activeAnim != nil {
+		activeAnim.Update()
+	}
 
 	for _, enemy := range g.enemies {
 		enemy.Dx = 0
@@ -107,11 +114,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	opts.GeoM.Translate(g.player.X, g.player.Y)
 	opts.GeoM.Translate(g.cam.X, g.cam.Y)
 
+	playerFrame := 0
+	activeAnim := g.player.ActiveAnimation(int(g.player.Dx), int(g.player.Dy))
+	if activeAnim != nil {
+		playerFrame = activeAnim.Frame()
+	}
+
 	// draw the player
 	screen.DrawImage(
 		// grab a subimage of the spritesheet
 		g.player.Img.SubImage(
-			image.Rect(0, 0, 16, 16),
+			g.playerSpriteSheet.Rect(playerFrame),
 		).(*ebiten.Image),
 		&opts,
 	)

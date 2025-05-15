@@ -2,21 +2,24 @@ package game
 
 import (
 	"image"
+	"roguelike/animation"
 	"roguelike/assets"
 	"roguelike/game/dungeon"
 	"roguelike/game/entities"
+	"roguelike/spritesheet"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type Game struct {
-	player      *entities.Player
-	enemies     []*entities.Enemy
-	potions     []*entities.Potion
-	tilemapJSON *dungeon.TilemapJSON
-	tilemapImg  *ebiten.Image
-	cam         *Camera
-	colliders   []image.Rectangle
+	player            *entities.Player
+	playerSpriteSheet *spritesheet.SpriteSheet
+	enemies           []*entities.Enemy
+	potions           []*entities.Potion
+	tilemapJSON       *dungeon.TilemapJSON
+	tilemapImg        *ebiten.Image
+	cam               *Camera
+	colliders         []image.Rectangle
 }
 
 func CheckCollisionHorizontal(sprite *entities.Sprite, colliders []image.Rectangle) {
@@ -76,6 +79,9 @@ func NewGame() (*Game, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	playerSpriteSHeet := spritesheet.NewSpriteSheet(4, 7, 16)
+
 	return &Game{
 		player: &entities.Player{
 			Sprite: &entities.Sprite{
@@ -85,7 +91,13 @@ func NewGame() (*Game, error) {
 			},
 			HP:    10,
 			MaxHP: 10,
+			Animation: map[entities.PlayerState]*animation.Animation{
+				entities.Up:    animation.NewAnimation(5, 13, 4, 20),
+				entities.Down:  animation.NewAnimation(4, 12, 4, 20),
+				entities.Left:  animation.NewAnimation(6, 14, 4, 20),
+				entities.Right: animation.NewAnimation(7, 15, 4, 20)},
 		},
+		playerSpriteSheet: playerSpriteSHeet,
 		enemies: []*entities.Enemy{
 			{Sprite: &entities.Sprite{Img: enemyImg, X: 200, Y: 200}, FollowPlayer: true},
 			{Sprite: &entities.Sprite{Img: enemyImg, X: 150, Y: 150}, FollowPlayer: false},
